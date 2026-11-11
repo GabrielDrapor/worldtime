@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
-const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+const html = readFileSync(new URL('./public/index.html', import.meta.url), 'utf8');
 const core = /<script id="core">([\s\S]*?)<\/script>/.exec(html)[1];
 const ctx = {}; vm.createContext(ctx);
 vm.runInContext(core + ';Object.assign(globalThis,{zonedMidnight,parts,offsetMs,rangeParts,offsetLabel,durationLabel,addDays,todayIn,zoneName});', ctx);
