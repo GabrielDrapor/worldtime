@@ -3,5 +3,6 @@
   "name": "team-timezones",
   "compatibility_date": "2026-11-01",
   // Static-only Worker: serves public/ (index.html) with no script.
-  "assets": { "directory": "./public" }
+  "assets": { "directory": "./public" },
+  "routes": [{ "pattern": "worldtime.jrd.pub", "custom_domain": true }]
 }
