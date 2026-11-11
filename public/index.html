@@ -173,12 +173,17 @@ function rangeParts(tz, a, b, h24) {
                : `${fmtDate(pa)}, ${fmtTime(pa, h24)} – ${fmtDate(pb)}, ${fmtTime(pb, h24)}`
   };
 }
-// One line of "Copy as text": "Berlin (GMT+1): Tue, Nov 10 · 18:30 – Wed 03:30"
-function copyLine(name, abbrev, tz, a, b, h24) {
-  const pa = parts(tz, a), pb = parts(tz, b);
-  const same = pa.y === pb.y && pa.mo === pb.mo && pa.d === pb.d;
-  const end = same ? fmtTime(pb, h24) : `${WD[pb.wd]} ${fmtTime(pb, h24)}`;
-  return `${name}${abbrev ? ` (${abbrev})` : ''}: ${fmtDate(pa)} · ${fmtTime(pa, h24)} – ${end}`;
+// Rows of "Copy as text", padded into aligned columns for a monospace code block:
+// "Berlin (GMT+1)     Tue, Nov 10  18:30 – Wed 03:30"
+function copyRows(zones, a, b, h24) {
+  const rows = zones.map(({ name, abbrev, tz }) => {
+    const pa = parts(tz, a), pb = parts(tz, b);
+    const same = pa.y === pb.y && pa.mo === pb.mo && pa.d === pb.d;
+    return [name + (abbrev ? ` (${abbrev})` : ''), fmtDate(pa), fmtTime(pa, h24),
+            same ? fmtTime(pb, h24) : `${WD[pb.wd]} ${fmtTime(pb, h24)}`];
+  });
+  const w = [0, 1, 2].map(c => Math.max(...rows.map(r => r[c].length)));
+  return rows.map(r => `${r[0].padEnd(w[0])}  ${r[1].padEnd(w[1])}  ${r[2].padStart(w[2])} – ${r[3]}`);
 }
 function offsetLabel(diffMs) {
   if (diffMs === 0) return '0';
@@ -406,8 +411,8 @@ $('copyText').onclick = () => {
   const a = slotTime(state.sel.start), b = slotTime(state.sel.end);
   const head = [state.task.trim(), durationLabel(state.sel.end - state.sel.start)].filter(Boolean).join(' · ');
   const order = [state.home, ...state.zones.keys()].filter((v, k, arr) => arr.indexOf(v) === k);
-  const lines = order.map(k => { const tz = state.zones[k]; return copyLine(zoneName(tz), abbr(tz, a), tz, a, b, state.h24); });
-  copy([head, ...lines].join('\n'), 'Copied as text');
+  const lines = copyRows(order.map(k => { const tz = state.zones[k]; return { name: zoneName(tz), abbrev: abbr(tz, a), tz }; }), a, b, state.h24);
+  copy([head, '```', ...lines, '```'].join('\n'), 'Copied as text');
 };
 
 // ---- Add zone ----

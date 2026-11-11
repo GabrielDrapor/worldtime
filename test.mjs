@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 const html = readFileSync(new URL('./public/index.html', import.meta.url), 'utf8');
 const core = /<script id="core">([\s\S]*?)<\/script>/.exec(html)[1];
 const ctx = {}; vm.createContext(ctx);
-vm.runInContext(core + ';Object.assign(globalThis,{zonedMidnight,parts,offsetMs,rangeParts,offsetLabel,durationLabel,addDays,todayIn,zoneName,copyLine});', ctx);
-const { zonedMidnight, offsetMs, rangeParts, offsetLabel, durationLabel, addDays, todayIn, zoneName, copyLine } = ctx;
+vm.runInContext(core + ';Object.assign(globalThis,{zonedMidnight,parts,offsetMs,rangeParts,offsetLabel,durationLabel,addDays,todayIn,zoneName,copyRows});', ctx);
+const { zonedMidnight, offsetMs, rangeParts, offsetLabel, durationLabel, addDays, todayIn, zoneName, copyRows } = ctx;
 const iso = t => new Date(t).toISOString();
 // Midnights
 assert.equal(iso(zonedMidnight('2026-11-13','Asia/Shanghai')), '2026-11-12T16:00:00.000Z');
@@ -34,8 +34,21 @@ assert.equal(zoneName('America/Los_Angeles'), 'Los Angeles');
 assert.equal(zoneName('UTC'), 'UTC');
 // Copy-as-text lines (example from the user: Shanghai Wed 01:30-10:30)
 const ca = Date.parse('2026-11-10T17:30:00Z'), cb = ca + 9 * 3600000;
-assert.equal(copyLine('Shanghai', 'GMT+8', 'Asia/Shanghai', ca, cb, true), 'Shanghai (GMT+8): Wed, Nov 11 · 01:30 – 10:30');
-assert.equal(copyLine('Los Angeles', 'PST', 'America/Los_Angeles', ca, cb, true), 'Los Angeles (PST): Tue, Nov 10 · 09:30 – 18:30');
-assert.equal(copyLine('Berlin', 'GMT+1', 'Europe/Berlin', ca, cb, true), 'Berlin (GMT+1): Tue, Nov 10 · 18:30 – Wed 03:30');
-assert.equal(copyLine('New York', 'EST', 'America/New_York', ca, cb, false), 'New York (EST): Tue, Nov 10 · 12:30pm – 9:30pm');
+const zs = [['Shanghai','GMT+8','Asia/Shanghai'],['Los Angeles','PST','America/Los_Angeles'],['Berlin','GMT+1','Europe/Berlin']]
+  .map(([name, abbrev, tz]) => ({ name, abbrev, tz }));
+assert.deepEqual([...copyRows(zs, ca, cb, true)], [
+  'Shanghai (GMT+8)   Wed, Nov 11  01:30 – 10:30',
+  'Los Angeles (PST)  Tue, Nov 10  09:30 – 18:30',
+  'Berlin (GMT+1)     Tue, Nov 10  18:30 – Wed 03:30']);
+// 12-hour: start times right-aligned; one-digit day padded
+const ny = [{ name: 'New York', abbrev: 'EST', tz: 'America/New_York' }, { name: 'Shanghai', abbrev: 'GMT+8', tz: 'Asia/Shanghai' }];
+const da = Date.parse('2026-11-09T14:00:00Z');
+assert.deepEqual([...copyRows(ny, da, da + 3600000, false)], [
+  'New York (EST)    Mon, Nov 9   9:00am – 10:00am',
+  'Shanghai (GMT+8)  Mon, Nov 9  10:00pm – 11:00pm']);
+// Different date widths ("Nov 9" vs "Nov 10") get padded
+const db = Date.parse('2026-11-09T16:00:00Z');
+assert.deepEqual([...copyRows(ny, db, db + 3600000, false)], [
+  'New York (EST)    Mon, Nov 9   11:00am – 12:00pm',
+  'Shanghai (GMT+8)  Tue, Nov 10  12:00am – 1:00am']);
 console.log('all tests passed');
