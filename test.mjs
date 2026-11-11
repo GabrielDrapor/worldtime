@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 const html = readFileSync(new URL('./public/index.html', import.meta.url), 'utf8');
 const core = /<script id="core">([\s\S]*?)<\/script>/.exec(html)[1];
 const ctx = {}; vm.createContext(ctx);
-vm.runInContext(core + ';Object.assign(globalThis,{zonedMidnight,parts,offsetMs,rangeParts,offsetLabel,durationLabel,addDays,todayIn,zoneName,copyRows});', ctx);
-const { zonedMidnight, offsetMs, rangeParts, offsetLabel, durationLabel, addDays, todayIn, zoneName, copyRows } = ctx;
+vm.runInContext(core + ';Object.assign(globalThis,{zonedMidnight,parts,offsetMs,rangeParts,offsetLabel,durationLabel,addDays,todayIn,zoneName,copyRows,alignToHour});', ctx);
+const { zonedMidnight, offsetMs, rangeParts, offsetLabel, durationLabel, addDays, todayIn, zoneName, copyRows, alignToHour } = ctx;
 const iso = t => new Date(t).toISOString();
 // Midnights
 assert.equal(iso(zonedMidnight('2026-11-13','Asia/Shanghai')), '2026-11-12T16:00:00.000Z');
@@ -13,15 +13,18 @@ assert.equal(iso(zonedMidnight('2026-11-01','America/Los_Angeles')), '2026-11-01
 assert.equal(iso(zonedMidnight('2026-11-02','America/Los_Angeles')), '2026-11-02T08:00:00.000Z');
 assert.equal(iso(zonedMidnight('2026-03-08','America/Los_Angeles')), '2026-03-08T08:00:00.000Z');
 assert.equal(iso(zonedMidnight('2026-11-13','Asia/Kolkata')), '2026-11-12T18:30:00.000Z');
-// Screenshot case: Shanghai Fri Nov 13 21:00-21:30
+// Screenshot case: Shanghai Fri Nov 13 21:00-21:30 (left column: time + short date, no weekday)
 const a = Date.parse('2026-11-13T13:00:00Z'), b = a + 1800000;
-assert.equal(rangeParts('America/Los_Angeles', a, b, true).text, 'Fri, Nov 13, 05:00 – 05:30');
-assert.equal(rangeParts('America/New_York', a, b, false).text, 'Fri, Nov 13, 8:00am – 8:30am');
-assert.equal(rangeParts('Europe/Berlin', a, b, true).text, 'Fri, Nov 13, 14:00 – 14:30');
-assert.equal(rangeParts('Asia/Kolkata', a, b, true).text, 'Fri, Nov 13, 18:30 – 19:00');
-// Cross-day range
-assert.equal(rangeParts('Asia/Shanghai', Date.parse('2026-11-13T15:00:00Z'), Date.parse('2026-11-13T17:00:00Z'), true).text,
-  'Fri, Nov 13, 23:00 – Sat, Nov 14, 01:00');
+const rp = (tz, x, y, h24) => { const r = rangeParts(tz, x, y, h24); return r.time + ' | ' + r.date; };
+assert.equal(rp('America/Los_Angeles', a, b, true), '05:00 – 05:30 | Nov 13');
+assert.equal(rp('America/New_York', a, b, false), '8:00am – 8:30am | Nov 13');
+assert.equal(rp('Asia/Kolkata', a, b, true), '18:30 – 19:00 | Nov 13');
+// Cross-day, same month and across months
+assert.equal(rp('Asia/Shanghai', Date.parse('2026-11-13T15:00:00Z'), Date.parse('2026-11-13T17:00:00Z'), true), '23:00 – 01:00 | Nov 13 → 14');
+assert.equal(rp('Asia/Shanghai', Date.parse('2026-11-30T15:00:00Z'), Date.parse('2026-11-30T17:00:00Z'), true), '23:00 – 01:00 | Nov 30 → Dec 1');
+// Align view start to a local hour
+assert.equal(new Date(alignToHour(Date.parse('2026-11-13T13:47:12Z'), 'Asia/Shanghai')).toISOString(), '2026-11-13T13:00:00.000Z');
+assert.equal(new Date(alignToHour(Date.parse('2026-11-13T13:47:00Z'), 'Asia/Kolkata')).toISOString(), '2026-11-13T13:30:00.000Z');
 // Offsets relative to home
 const t = zonedMidnight('2026-11-13','Asia/Shanghai');
 assert.equal(offsetLabel(offsetMs('America/Los_Angeles', t) - offsetMs('Asia/Shanghai', t)), '-16');

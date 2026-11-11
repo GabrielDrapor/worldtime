@@ -29,33 +29,37 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
 .selbar .info{color:var(--muted);margin-right:auto}
 .selbar .info b{color:var(--text)}
 #task{width:240px}
-.board{display:grid;grid-template-columns:minmax(0,350px) 30px minmax(0,1fr) 30px}
+.board{display:grid;grid-template-columns:minmax(0,300px) 30px minmax(0,1fr) 30px}
 .daynav{border:0;border-radius:0;padding:0;background:var(--panel);color:var(--muted);display:flex;align-items:center;justify-content:center}
 .daynav:hover{background:var(--work);color:var(--accent)}
+.daynav:focus{outline:none}
+.daynav:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .daynav svg.i{width:18px;height:18px}
 #dayPrev{border-right:1px solid var(--line)}
 #dayNext{border-left:1px solid var(--line)}
-.row{height:64px;border-bottom:1px solid var(--line)}
+.row{height:50px;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:0}
 .left{border-right:1px solid var(--line)}
-.left .row{display:flex;align-items:center;gap:8px;padding:0 12px 0 6px}
+.left .row{display:flex;align-items:center;gap:6px;padding:0 10px 0 4px}
 .row.home{background:var(--home)}
-.acts{display:grid;grid-template-columns:repeat(2,22px);gap:2px}
-.acts button{padding:3px;width:22px;height:22px;border-radius:5px;color:var(--muted);border-color:transparent;background:transparent}
+.acts{display:grid;grid-template-columns:repeat(2,20px);gap:1px}
+.acts button{padding:3px;width:20px;height:20px;border-radius:5px;color:var(--muted);border-color:transparent;background:transparent}
 .acts button:hover:not(:disabled){border-color:var(--line);color:var(--text)}
 .acts button.on{color:var(--accent)}
-.off{width:36px;display:flex;justify-content:flex-end;font-weight:700;color:var(--muted);flex:none}
+.off{width:32px;display:flex;justify-content:flex-end;font-weight:700;color:var(--muted);flex:none}
 .off svg.i{width:18px;height:18px;color:var(--text)}
 .name{flex:1;min-width:0}
-.label{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sub{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label{font-weight:700;font-size:15px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{color:var(--muted);font-size:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .range{text-align:right;white-space:nowrap;flex:none}
-.range .t{font-weight:700;font-size:15px}
-.range .d{color:var(--muted);font-size:12px}
+.range .t{font-weight:700;font-size:14px;line-height:1.2}
+.range .d{color:var(--muted);font-size:12px;line-height:1.2}
 .scroll{overflow-x:auto}
-.strips{position:relative;min-width:760px;user-select:none;touch-action:pan-y;cursor:crosshair}
-.strip{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));height:100%;padding:9px 0}
-.cell{display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--day);border-right:1px solid var(--line);font-size:15px;font-weight:600;line-height:1.1}
+.strips{position:relative;overflow:hidden;min-width:760px;user-select:none;touch-action:pan-y;cursor:crosshair}
+/* The track holds 26 hour columns (one hidden on each side) so it can slide by one hour seamlessly. */
+.track{position:relative;width:calc(100% * 26 / 24);margin-left:calc(-100% / 24);will-change:transform}
+.strip{display:grid;grid-template-columns:repeat(26,minmax(0,1fr));height:100%;padding:6px 0}
+.cell{display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--day);border-right:1px solid var(--line);font-size:14px;font-weight:600;line-height:1.1}
 .cell:last-child{border-right:0}
 .cell small{font-size:10px;font-weight:500;opacity:.8}
 .cell.night{background:var(--night);color:var(--night-text)}
@@ -104,9 +108,9 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
     </div>
     <div class="board">
       <div class="left" id="left"></div>
-      <button class="daynav" id="dayPrev" title="Previous day"><svg class="i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="daynav" id="dayPrev" title="Earlier (hold to keep moving, or press ←)"><svg class="i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
       <div class="scroll"><div class="strips" id="strips"></div></div>
-      <button class="daynav" id="dayNext" title="Next day"><svg class="i" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="daynav" id="dayNext" title="Later (hold to keep moving, or press →)"><svg class="i" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
     </div>
   </div>
 
@@ -115,7 +119,7 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
     <button class="primary" type="submit">Add time zone</button>
   </form>
   <datalist id="tzList"></datalist>
-  <div class="hint">Drag across the strips to select a time range (30-minute steps). Click once to select one full hour. The home row is the base time zone: the strips follow its date. Use the arrows on either side to move one day. Your list is saved in this browser.</div>
+  <div class="hint">Drag across the strips to select a time range (30-minute steps). Click once to select one full hour. The home row is the base time zone. The arrows on either side move the timeline by one hour: hold them (or the ← → keys) to keep moving. Your list is saved in this browser.</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -163,16 +167,18 @@ function fmtTime(p, h24) {
   return `${p.h % 12 || 12}:${pad(p.mi)}${p.h < 12 ? 'am' : 'pm'}`;
 }
 function fmtDate(p) { return `${WD[p.wd]}, ${MON[p.mo - 1]} ${p.d}`; }
+function fmtDay(p) { return `${MON[p.mo - 1]} ${p.d}`; }
+// Left-column text: time "18:00 – 03:30", date "Nov 10 → 11" (no weekday).
 function rangeParts(tz, a, b, h24) {
   const pa = parts(tz, a), pb = parts(tz, b);
   const same = pa.y === pb.y && pa.mo === pb.mo && pa.d === pb.d;
   return {
     time: `${fmtTime(pa, h24)} – ${fmtTime(pb, h24)}`,
-    date: same ? fmtDate(pa) : `${fmtDate(pa)} → ${fmtDate(pb)}`,
-    text: same ? `${fmtDate(pa)}, ${fmtTime(pa, h24)} – ${fmtTime(pb, h24)}`
-               : `${fmtDate(pa)}, ${fmtTime(pa, h24)} – ${fmtDate(pb)}, ${fmtTime(pb, h24)}`
+    date: same ? fmtDay(pa) : `${fmtDay(pa)} → ${pa.mo === pb.mo ? pb.d : fmtDay(pb)}`
   };
 }
+// Round t down to the start of a local hour in tz (handles :30 and :45 offsets).
+function alignToHour(t, tz) { return Math.floor(t / 60000) * 60000 - parts(tz, t).mi * 60000; }
 // Rows of "Copy as text", padded into aligned columns for a monospace code block:
 // "Berlin (GMT+1)     Tue, Nov 10  18:30 – Wed 03:30"
 function copyRows(zones, a, b, h24) {
@@ -211,7 +217,7 @@ const ALIAS = {
 };
 const ALL_TZ = (Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : []).concat(['UTC']);
 const STORE_KEY = 'team-timezones.v2';
-const SLOTS = 48;
+const SLOTS = 48, HOUR = 3600000, SLOT = 1800000, STEP_MS = 120;
 const viewerTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
 const ICON = {
@@ -224,7 +230,7 @@ const ICON = {
 const state = {
   zones: [...new Set([viewerTz, 'America/Los_Angeles', 'America/New_York', 'Europe/Berlin'])],
   home: 0, h24: true, workStart: 9, workEnd: 18,
-  date: null, sel: null, task: ''
+  viewStart: null, sel: null, task: ''  // viewStart: instant of the first visible hour; sel: {a, b} instants
 };
 
 function load() {
@@ -250,8 +256,9 @@ function save() {
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const homeTz = () => state.zones[state.home];
-const base = () => zonedMidnight(state.date, homeTz());
-const slotTime = s => base() + s * 1800000;
+const midnightOf = dateStr => zonedMidnight(dateStr, homeTz());
+// Position (in % of the track) of instant t; the track starts one hour before viewStart and spans 26 hours.
+const trackPct = t => (t - (state.viewStart - HOUR)) / (26 * HOUR) * 100;
 
 function abbr(tz, t, style = 'short') {
   try {
@@ -261,8 +268,8 @@ function abbr(tz, t, style = 'short') {
 }
 
 function render() {
-  const b = base(), htz = homeTz(), hOff = offsetMs(htz, b);
-  $('date').value = state.date;
+  const b = state.viewStart, htz = homeTz(), hOff = offsetMs(htz, b);
+  $('date').value = todayIn(htz, b);
   $('clock').value = state.h24 ? '24' : '12';
   $('workStart').value = state.workStart; $('workEnd').value = state.workEnd;
   $('task').value = state.task;
@@ -272,11 +279,11 @@ function render() {
     const isHome = i === state.home;
     let range;
     if (state.sel) {
-      const r = rangeParts(tz, slotTime(state.sel.start), slotTime(state.sel.end), state.h24);
+      const r = rangeParts(tz, state.sel.a, state.sel.b, state.h24);
       range = `<div class="range"><div class="t">${r.time}</div><div class="d">${r.date}</div></div>`;
     } else {
       const p = parts(tz, Date.now());
-      range = `<div class="range"><div class="t">${fmtTime(p, state.h24)}</div><div class="d">Now · ${fmtDate(p)}</div></div>`;
+      range = `<div class="range"><div class="t">${fmtTime(p, state.h24)}</div><div class="d">Now · ${fmtDay(p)}</div></div>`;
     }
     left += `<div class="row${isHome ? ' home' : ''}" data-i="${i}">
       <div class="acts">
@@ -291,11 +298,12 @@ function render() {
       ${range}
     </div>`;
 
-    let cells = '', prevKey = null;
-    for (let c = 0; c < 24; c++) {
-      const p = parts(tz, b + c * 3600000);
-      const key = `${p.y}-${p.mo}-${p.d}`;
-      const dayStart = prevKey !== null ? key !== prevKey : (p.h === 0 && p.mi === 0);
+    const dayKey = p => `${p.y}-${p.mo}-${p.d}`;
+    let cells = '', prevKey = dayKey(parts(tz, b - 2 * HOUR));
+    for (let c = -1; c <= 24; c++) {
+      const p = parts(tz, b + c * HOUR);
+      const key = dayKey(p);
+      const dayStart = key !== prevKey;
       prevKey = key;
       if (dayStart) {
         cells += `<div class="cell daystart" title="${fmtDate(p)}"><small>${MON[p.mo - 1]}</small>${p.d}</div>`;
@@ -310,20 +318,21 @@ function render() {
   });
 
   const now = Date.now();
-  if (now >= b && now < b + 86400000) right += `<div class="nowline" style="left:${(now - b) / 864000}%" title="Now"></div>`;
-  if (state.sel) right += `<div class="selection" style="left:${state.sel.start / SLOTS * 100}%;width:${(state.sel.end - state.sel.start) / SLOTS * 100}%"></div>`;
+  if (now >= b - HOUR && now < b + 25 * HOUR) right += `<div class="nowline" style="left:${trackPct(now)}%" title="Now"></div>`;
+  if (state.sel) right += `<div class="selection" style="left:${trackPct(state.sel.a)}%;width:${(state.sel.b - state.sel.a) / (26 * HOUR) * 100}%"></div>`;
 
   $('left').innerHTML = left;
-  $('strips').innerHTML = right;
+  $('strips').innerHTML = `<div class="track" id="track">${right}</div>`;
 
   $('selInfo').innerHTML = state.sel
-    ? `Selected: <b>${durationLabel(state.sel.end - state.sel.start)}</b>`
+    ? `Selected: <b>${durationLabel((state.sel.b - state.sel.a) / SLOT)}</b>`
     : 'Drag across the strips below to select a time range';
   ['copyText', 'clearSel'].forEach(id => $(id).disabled = !state.sel);
 }
 
 // ---- Selection by drag ----
 let drag = null;
+const selFromSlots = (s, e) => ({ a: state.viewStart + s * SLOT, b: state.viewStart + e * SLOT });
 function slotAt(e) {
   const r = $('strips').getBoundingClientRect();
   return Math.max(0, Math.min(SLOTS - 1, Math.floor((e.clientX - r.left) / r.width * SLOTS)));
@@ -333,19 +342,19 @@ $('strips').addEventListener('pointerdown', e => {
   const s = slotAt(e);
   drag = { anchor: s, moved: false, id: e.pointerId };
   $('strips').setPointerCapture(e.pointerId);
-  state.sel = { start: s, end: s + 1 };
+  state.sel = selFromSlots(s, s + 1);
   render();
 });
 $('strips').addEventListener('pointermove', e => {
   if (!drag || e.pointerId !== drag.id) return;
   const s = slotAt(e);
   if (s !== drag.anchor) drag.moved = true;
-  const sel = { start: Math.min(drag.anchor, s), end: Math.max(drag.anchor, s) + 1 };
-  if (!state.sel || sel.start !== state.sel.start || sel.end !== state.sel.end) { state.sel = sel; render(); }
+  const sel = selFromSlots(Math.min(drag.anchor, s), Math.max(drag.anchor, s) + 1);
+  if (!state.sel || sel.a !== state.sel.a || sel.b !== state.sel.b) { state.sel = sel; render(); }
 });
 function endDrag(e) {
   if (!drag || e.pointerId !== drag.id) return;
-  if (!drag.moved) { const h = Math.floor(drag.anchor / 2) * 2; state.sel = { start: h, end: h + 2 }; render(); }
+  if (!drag.moved) { const h = Math.floor(drag.anchor / 2) * 2; state.sel = selFromSlots(h, h + 2); render(); }
   drag = null;
 }
 $('strips').addEventListener('pointerup', endDrag);
@@ -361,14 +370,9 @@ $('left').addEventListener('click', e => {
   else if (btn.dataset.act === 'up') { [z[i - 1], z[i]] = [z[i], z[i - 1]]; }
   else if (btn.dataset.act === 'down') { [z[i + 1], z[i]] = [z[i], z[i + 1]]; }
   else if (btn.dataset.act === 'home') {
-    // Keep the same selected instants when switching the base zone, if they still fit the new day.
-    const sel = state.sel && [slotTime(state.sel.start), slotTime(state.sel.end)];
+    // The selection is stored as instants, so it stays; only re-align the view to the new zone's hours.
     state.home = i;
-    state.date = todayIn(z[i], sel ? sel[0] : Date.now());
-    if (sel) {
-      const s = Math.round((sel[0] - base()) / 1800000), en = Math.round((sel[1] - base()) / 1800000);
-      state.sel = s >= 0 && en <= SLOTS ? { start: s, end: en } : null;
-    }
+    state.viewStart = alignToHour(state.viewStart, z[i]);
     save(); render(); return;
   }
   const hi = z.indexOf(homeZone);
@@ -385,12 +389,40 @@ for (let h = 0; h <= 24; h++) {
 $('workStart').onchange = e => { state.workStart = +e.target.value; save(); render(); };
 $('workEnd').onchange = e => { state.workEnd = +e.target.value; save(); render(); };
 $('clock').onchange = e => { state.h24 = e.target.value === '24'; save(); render(); };
-$('date').onchange = e => { if (e.target.value) { state.date = e.target.value; render(); } };
-$('prev').onclick = () => { state.date = addDays(state.date, -1); render(); };
-$('next').onclick = () => { state.date = addDays(state.date, 1); render(); };
-$('dayPrev').onclick = () => $('prev').click();
-$('dayNext').onclick = () => $('next').click();
-$('today').onclick = () => { state.date = todayIn(homeTz()); render(); };
+$('date').onchange = e => { if (e.target.value) { state.viewStart = midnightOf(e.target.value); render(); } };
+const shiftDays = n => { state.viewStart = midnightOf(addDays(todayIn(homeTz(), state.viewStart), n)); render(); };
+$('prev').onclick = () => shiftDays(-1);
+$('next').onclick = () => shiftDays(1);
+$('today').onclick = () => { state.viewStart = midnightOf(todayIn(homeTz())); render(); };
+
+// ---- Hour-by-hour sliding with the side arrows (hold to keep moving) ----
+let stepping = false, holdDir = 0;
+function step(dir) {
+  if (stepping) return;
+  stepping = true;
+  const track = $('track');
+  track.style.transition = `transform ${STEP_MS}ms linear`;
+  track.style.transform = `translateX(${-dir * 100 / 26}%)`;
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    state.viewStart += dir * HOUR;
+    render();  // the new track has no transform, so it lines up exactly with the slid old one
+    stepping = false;
+    if (holdDir) step(holdDir);
+  };
+  track.addEventListener('transitionend', finish, { once: true });
+  setTimeout(finish, STEP_MS + 80);  // fallback if transitionend does not fire
+}
+for (const [id, dir] of [['dayPrev', -1], ['dayNext', 1]]) {
+  $(id).addEventListener('pointerdown', e => { if (e.button === 0) { holdDir = dir; step(dir); } });
+}
+for (const ev of ['pointerup', 'pointercancel', 'blur']) window.addEventListener(ev, () => { holdDir = 0; });
+document.addEventListener('keydown', e => {
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); step(e.key === 'ArrowLeft' ? -1 : 1); }
+});
 $('task').oninput = e => { state.task = e.target.value; };
 $('clearSel').onclick = () => { state.sel = null; render(); };
 
@@ -408,8 +440,8 @@ async function copy(text, msg) {
 }
 $('copyText').onclick = () => {
   if (!state.sel) return;
-  const a = slotTime(state.sel.start), b = slotTime(state.sel.end);
-  const head = [state.task.trim(), durationLabel(state.sel.end - state.sel.start)].filter(Boolean).join(' · ');
+  const { a, b } = state.sel;
+  const head = [state.task.trim(), durationLabel((b - a) / SLOT)].filter(Boolean).join(' · ');
   const order = [state.home, ...state.zones.keys()].filter((v, k, arr) => arr.indexOf(v) === k);
   const lines = copyRows(order.map(k => { const tz = state.zones[k]; return { name: zoneName(tz), abbrev: abbr(tz, a), tz }; }), a, b, state.h24);
   copy([head, '```', ...lines, '```'].join('\n'), 'Copied as text');
@@ -439,9 +471,9 @@ $('addForm').onsubmit = e => {
 };
 
 load();
-if (!state.date) state.date = todayIn(homeTz());
+state.viewStart = midnightOf(todayIn(homeTz()));
 render();
-setInterval(() => { if (!drag) render(); }, 60000);
+setInterval(() => { if (!drag && !stepping) render(); }, 60000);
 </script>
 </body>
 </html>
