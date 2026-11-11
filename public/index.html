@@ -108,9 +108,9 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
     </div>
     <div class="board">
       <div class="left" id="left"></div>
-      <button class="daynav" id="dayPrev" title="Earlier (hold to keep moving, or press ←)"><svg class="i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="daynav" id="dayPrev" title="Earlier: 3 hours per click, hold to keep moving"><svg class="i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
       <div class="scroll"><div class="strips" id="strips"></div></div>
-      <button class="daynav" id="dayNext" title="Later (hold to keep moving, or press →)"><svg class="i" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="daynav" id="dayNext" title="Later: 3 hours per click, hold to keep moving"><svg class="i" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
     </div>
   </div>
 
@@ -119,7 +119,7 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
     <button class="primary" type="submit">Add time zone</button>
   </form>
   <datalist id="tzList"></datalist>
-  <div class="hint">Drag across the strips to select a time range (30-minute steps). Click once to select one full hour. The home row is the base time zone. The arrows on either side move the timeline by one hour: hold them (or the ← → keys) to keep moving. Your list is saved in this browser.</div>
+  <div class="hint">Drag across the strips to select a time range (30-minute steps). Click once to select one full hour. The home row is the base time zone. Move the timeline with a two-finger swipe, the mouse wheel, the arrows on either side (3 hours per click, hold to keep moving) or the ← → keys. Your list is saved in this browser.</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -217,7 +217,7 @@ const ALIAS = {
 };
 const ALL_TZ = (Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : []).concat(['UTC']);
 const STORE_KEY = 'team-timezones.v2';
-const SLOTS = 48, HOUR = 3600000, SLOT = 1800000, STEP_MS = 120;
+const SLOTS = 48, HOUR = 3600000, SLOT = 1800000;
 const viewerTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
 const ICON = {
@@ -323,6 +323,7 @@ function render() {
 
   $('left').innerHTML = left;
   $('strips').innerHTML = `<div class="track" id="track">${right}</div>`;
+  applyOffset();
 
   $('selInfo').innerHTML = state.sel
     ? `Selected: <b>${durationLabel((state.sel.b - state.sel.a) / SLOT)}</b>`
@@ -335,10 +336,11 @@ let drag = null;
 const selFromSlots = (s, e) => ({ a: state.viewStart + s * SLOT, b: state.viewStart + e * SLOT });
 function slotAt(e) {
   const r = $('strips').getBoundingClientRect();
-  return Math.max(0, Math.min(SLOTS - 1, Math.floor((e.clientX - r.left) / r.width * SLOTS)));
+  return Math.max(0, Math.min(SLOTS - 1, Math.floor((e.clientX - r.left - offsetPx) / r.width * SLOTS)));
 }
 $('strips').addEventListener('pointerdown', e => {
   if (e.button !== 0) return;
+  if (anim || Math.abs(offsetPx) > 0.5) { stopAnim(); moveBy(snapDistance()); }  // settle on the hour grid first
   const s = slotAt(e);
   drag = { anchor: s, moved: false, id: e.pointerId };
   $('strips').setPointerCapture(e.pointerId);
@@ -389,40 +391,90 @@ for (let h = 0; h <= 24; h++) {
 $('workStart').onchange = e => { state.workStart = +e.target.value; save(); render(); };
 $('workEnd').onchange = e => { state.workEnd = +e.target.value; save(); render(); };
 $('clock').onchange = e => { state.h24 = e.target.value === '24'; save(); render(); };
-$('date').onchange = e => { if (e.target.value) { state.viewStart = midnightOf(e.target.value); render(); } };
-const shiftDays = n => { state.viewStart = midnightOf(addDays(todayIn(homeTz(), state.viewStart), n)); render(); };
+$('date').onchange = e => { if (e.target.value) { stopAnim(); offsetPx = 0; state.viewStart = midnightOf(e.target.value); render(); } };
+const shiftDays = n => { stopAnim(); offsetPx = 0; state.viewStart = midnightOf(addDays(todayIn(homeTz(), state.viewStart), n)); render(); };
 $('prev').onclick = () => shiftDays(-1);
 $('next').onclick = () => shiftDays(1);
-$('today').onclick = () => { state.viewStart = midnightOf(todayIn(homeTz())); render(); };
+$('today').onclick = () => { stopAnim(); offsetPx = 0; state.viewStart = midnightOf(todayIn(homeTz())); render(); };
 
-// ---- Hour-by-hour sliding with the side arrows (hold to keep moving) ----
-let stepping = false, holdDir = 0;
-function step(dir) {
-  if (stepping) return;
-  stepping = true;
-  const track = $('track');
-  track.style.transition = `transform ${STEP_MS}ms linear`;
-  track.style.transform = `translateX(${-dir * 100 / 26}%)`;
-  let done = false;
-  const finish = () => {
-    if (done) return;
-    done = true;
-    state.viewStart += dir * HOUR;
-    render();  // the new track has no transform, so it lines up exactly with the slid old one
-    stepping = false;
-    if (holdDir) step(holdDir);
+// ---- Moving the timeline: arrows, trackpad and mouse wheel all go through moveBy() ----
+// offsetPx is how far the track is slid from its rest position. It stays within one hour column;
+// each time it passes a full column, viewStart moves one hour and the track is re-rendered.
+let offsetPx = 0, anim = null, holdTimer = null, snapTimer = null;
+const cellW = () => $('strips').getBoundingClientRect().width / 24;
+function applyOffset() { const t = $('track'); if (t) t.style.transform = `translateX(${offsetPx}px)`; }
+function moveBy(px) {  // px > 0 moves to later times
+  offsetPx -= px;
+  const w = cellW();
+  let crossed = false;
+  const eps = 0.01;  // absorb float error so landing exactly on a column counts as crossing it
+  while (offsetPx <= -w + eps) { offsetPx += w; state.viewStart += HOUR; crossed = true; }
+  while (offsetPx >= w - eps) { offsetPx -= w; state.viewStart -= HOUR; crossed = true; }
+  if (Math.abs(offsetPx) < eps) offsetPx = 0;
+  crossed ? render() : applyOffset();
+}
+function stopAnim() { if (anim) cancelAnimationFrame(anim.raf); anim = null; }
+// Ease-out slide by px pixels over ms.
+function slideBy(px, ms) {
+  stopAnim();
+  const start = performance.now();
+  let done = 0;
+  anim = { raf: 0 };
+  const frame = now => {
+    const k = Math.min(1, (now - start) / ms), target = px * (1 - Math.pow(1 - k, 3));
+    moveBy(target - done); done = target;
+    if (k < 1) anim.raf = requestAnimationFrame(frame); else anim = null;
   };
-  track.addEventListener('transitionend', finish, { once: true });
-  setTimeout(finish, STEP_MS + 80);  // fallback if transitionend does not fire
+  anim.raf = requestAnimationFrame(frame);
 }
+// Pixels needed to land exactly on an hour boundary.
+function snapDistance() {
+  const w = cellW(), target = Math.abs(offsetPx) > w / 2 ? Math.sign(offsetPx) * w : 0;
+  return offsetPx - target;
+}
+const snap = () => { if (Math.abs(snapDistance()) > 0.5) slideBy(snapDistance(), 160); else { moveBy(snapDistance()); } };
+// Steady scrolling while an arrow is held.
+function startHold(dir) {
+  stopAnim();
+  const speed = 12 * cellW() / 1000;  // 12 hours per second
+  let last = performance.now();
+  anim = { raf: 0, hold: true };
+  const frame = now => { moveBy(dir * speed * (now - last)); last = now; anim.raf = requestAnimationFrame(frame); };
+  anim.raf = requestAnimationFrame(frame);
+}
+const ARROW_HOURS = 3;
 for (const [id, dir] of [['dayPrev', -1], ['dayNext', 1]]) {
-  $(id).addEventListener('pointerdown', e => { if (e.button === 0) { holdDir = dir; step(dir); } });
+  $(id).addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    slideBy(dir * ARROW_HOURS * cellW() + offsetPx, 260);
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(() => startHold(dir), 300);
+  });
 }
-for (const ev of ['pointerup', 'pointercancel', 'blur']) window.addEventListener(ev, () => { holdDir = 0; });
+function endHold() {
+  clearTimeout(holdTimer);
+  if (anim && anim.hold) { stopAnim(); snap(); }
+}
+for (const ev of ['pointerup', 'pointercancel', 'blur']) window.addEventListener(ev, endHold);
 document.addEventListener('keydown', e => {
   if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); step(e.key === 'ArrowLeft' ? -1 : 1); }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    slideBy((e.key === 'ArrowLeft' ? -1 : 1) * cellW() + offsetPx, 160);
+  }
 });
+// Trackpad two-finger swipe (horizontal) and mouse wheel (vertical) over the strips.
+$('strips').addEventListener('wheel', e => {
+  let d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+  if (!d) return;
+  e.preventDefault();
+  if (e.deltaMode === 1) d *= 16; else if (e.deltaMode === 2) d *= cellW() * 24;
+  stopAnim();
+  moveBy(d);
+  clearTimeout(snapTimer);
+  snapTimer = setTimeout(snap, 140);
+}, { passive: false });
+
 $('task').oninput = e => { state.task = e.target.value; };
 $('clearSel').onclick = () => { state.sel = null; render(); };
 
@@ -473,7 +525,7 @@ $('addForm').onsubmit = e => {
 load();
 state.viewStart = midnightOf(todayIn(homeTz()));
 render();
-setInterval(() => { if (!drag && !stepping) render(); }, 60000);
+setInterval(() => { if (!drag && !anim) render(); }, 60000);
 </script>
 </body>
 </html>
