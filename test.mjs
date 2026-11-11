@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 const html = readFileSync(new URL('./public/index.html', import.meta.url), 'utf8');
 const core = /<script id="core">([\s\S]*?)<\/script>/.exec(html)[1];
 const ctx = {}; vm.createContext(ctx);
-vm.runInContext(core + ';Object.assign(globalThis,{zonedMidnight,parts,offsetMs,rangeParts,offsetLabel,durationLabel,addDays,todayIn,zoneName});', ctx);
-const { zonedMidnight, offsetMs, rangeParts, offsetLabel, durationLabel, addDays, todayIn, zoneName } = ctx;
+vm.runInContext(core + ';Object.assign(globalThis,{zonedMidnight,parts,offsetMs,rangeParts,offsetLabel,durationLabel,addDays,todayIn,zoneName,copyLine});', ctx);
+const { zonedMidnight, offsetMs, rangeParts, offsetLabel, durationLabel, addDays, todayIn, zoneName, copyLine } = ctx;
 const iso = t => new Date(t).toISOString();
 // Midnights
 assert.equal(iso(zonedMidnight('2026-11-13','Asia/Shanghai')), '2026-11-12T16:00:00.000Z');
@@ -32,4 +32,10 @@ assert.equal(addDays('2026-12-31', 1), '2027-01-01');
 assert.equal(todayIn('Asia/Shanghai', Date.parse('2026-11-13T17:00:00Z')), '2026-11-14');
 assert.equal(zoneName('America/Los_Angeles'), 'Los Angeles');
 assert.equal(zoneName('UTC'), 'UTC');
+// Copy-as-text lines (example from the user: Shanghai Wed 01:30-10:30)
+const ca = Date.parse('2026-11-10T17:30:00Z'), cb = ca + 9 * 3600000;
+assert.equal(copyLine('Shanghai', 'GMT+8', 'Asia/Shanghai', ca, cb, true), 'Shanghai (GMT+8): Wed, Nov 11 · 01:30 – 10:30');
+assert.equal(copyLine('Los Angeles', 'PST', 'America/Los_Angeles', ca, cb, true), 'Los Angeles (PST): Tue, Nov 10 · 09:30 – 18:30');
+assert.equal(copyLine('Berlin', 'GMT+1', 'Europe/Berlin', ca, cb, true), 'Berlin (GMT+1): Tue, Nov 10 · 18:30 – Wed 03:30');
+assert.equal(copyLine('New York', 'EST', 'America/New_York', ca, cb, false), 'New York (EST): Tue, Nov 10 · 12:30pm – 9:30pm');
 console.log('all tests passed');

@@ -29,7 +29,12 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
 .selbar .info{color:var(--muted);margin-right:auto}
 .selbar .info b{color:var(--text)}
 #task{width:240px}
-.board{display:grid;grid-template-columns:minmax(0,350px) minmax(0,1fr)}
+.board{display:grid;grid-template-columns:minmax(0,350px) 30px minmax(0,1fr) 30px}
+.daynav{border:0;border-radius:0;padding:0;background:var(--panel);color:var(--muted);display:flex;align-items:center;justify-content:center}
+.daynav:hover{background:var(--work);color:var(--accent)}
+.daynav svg.i{width:18px;height:18px}
+#dayPrev{border-right:1px solid var(--line)}
+#dayNext{border-left:1px solid var(--line)}
 .row{height:64px;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:0}
 .left{border-right:1px solid var(--line)}
@@ -65,7 +70,7 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
 @media (max-width:720px){
-  .board{grid-template-columns:minmax(0,200px) minmax(0,1fr)}
+  .board{grid-template-columns:minmax(0,200px) 26px minmax(0,1fr) 26px}
   .range{display:none}
   #task{width:100%}
 }
@@ -95,12 +100,13 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
       <span class="info" id="selInfo"></span>
       <input id="task" placeholder="Title (optional), e.g. Day off / Weekly sync">
       <button class="primary" id="copyText">Copy as text</button>
-      <button id="copyLink">Copy share link</button>
       <button id="clearSel">Clear</button>
     </div>
     <div class="board">
       <div class="left" id="left"></div>
+      <button class="daynav" id="dayPrev" title="Previous day"><svg class="i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
       <div class="scroll"><div class="strips" id="strips"></div></div>
+      <button class="daynav" id="dayNext" title="Next day"><svg class="i" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
     </div>
   </div>
 
@@ -109,7 +115,7 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
     <button class="primary" type="submit">Add time zone</button>
   </form>
   <datalist id="tzList"></datalist>
-  <div class="hint">Drag across the strips to select a time range (30-minute steps). Click once to select one full hour. The home row is the base time zone: the strips follow its date. Your list is saved in this browser. Use "Copy share link" to send the same view to a teammate.</div>
+  <div class="hint">Drag across the strips to select a time range (30-minute steps). Click once to select one full hour. The home row is the base time zone: the strips follow its date. Use the arrows on either side to move one day. Your list is saved in this browser.</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -167,6 +173,13 @@ function rangeParts(tz, a, b, h24) {
                : `${fmtDate(pa)}, ${fmtTime(pa, h24)} – ${fmtDate(pb)}, ${fmtTime(pb, h24)}`
   };
 }
+// One line of "Copy as text": "Berlin (GMT+1): Tue, Nov 10 · 18:30 – Wed 03:30"
+function copyLine(name, abbrev, tz, a, b, h24) {
+  const pa = parts(tz, a), pb = parts(tz, b);
+  const same = pa.y === pb.y && pa.mo === pb.mo && pa.d === pb.d;
+  const end = same ? fmtTime(pb, h24) : `${WD[pb.wd]} ${fmtTime(pb, h24)}`;
+  return `${name}${abbrev ? ` (${abbrev})` : ''}: ${fmtDate(pa)} · ${fmtTime(pa, h24)} – ${end}`;
+}
 function offsetLabel(diffMs) {
   if (diffMs === 0) return '0';
   const h = diffMs / 3600000;
@@ -217,17 +230,6 @@ function load() {
       h24: s.h24 !== false, workStart: s.workStart ?? 9, workEnd: s.workEnd ?? 18
     });
   } catch {}
-  // A share link overrides the saved list.
-  const h = new URLSearchParams(location.hash.slice(1));
-  if (h.get('z')) {
-    const zones = h.get('z').split('|').filter(isValidTz);
-    if (zones.length) { state.zones = zones; state.home = Math.min(+h.get('h') || 0, zones.length - 1); }
-    if (/^\d{4}-\d{2}-\d{2}$/.test(h.get('d') || '')) state.date = h.get('d');
-    const m = /^(\d+)-(\d+)$/.exec(h.get('s') || '');
-    if (m && +m[1] < +m[2] && +m[2] <= SLOTS) state.sel = { start: +m[1], end: +m[2] };
-    if (h.get('t')) state.task = h.get('t');
-    history.replaceState(null, '', location.pathname + location.search);
-  }
   if (!state.zones.length) state.zones = [viewerTz];
   if (state.home >= state.zones.length) state.home = 0;
   save();
@@ -381,6 +383,8 @@ $('clock').onchange = e => { state.h24 = e.target.value === '24'; save(); render
 $('date').onchange = e => { if (e.target.value) { state.date = e.target.value; render(); } };
 $('prev').onclick = () => { state.date = addDays(state.date, -1); render(); };
 $('next').onclick = () => { state.date = addDays(state.date, 1); render(); };
+$('dayPrev').onclick = () => $('prev').click();
+$('dayNext').onclick = () => $('next').click();
 $('today').onclick = () => { state.date = todayIn(homeTz()); render(); };
 $('task').oninput = e => { state.task = e.target.value; };
 $('clearSel').onclick = () => { state.sel = null; render(); };
@@ -400,18 +404,10 @@ async function copy(text, msg) {
 $('copyText').onclick = () => {
   if (!state.sel) return;
   const a = slotTime(state.sel.start), b = slotTime(state.sel.end);
-  const head = `${state.task.trim() || 'Time'} (${durationLabel(state.sel.end - state.sel.start)})`;
-  const lines = state.zones.map(tz => `${zoneName(tz)}: ${rangeParts(tz, a, b, state.h24).text}`);
+  const head = [state.task.trim(), durationLabel(state.sel.end - state.sel.start)].filter(Boolean).join(' · ');
+  const order = [state.home, ...state.zones.keys()].filter((v, k, arr) => arr.indexOf(v) === k);
+  const lines = order.map(k => { const tz = state.zones[k]; return copyLine(zoneName(tz), abbr(tz, a), tz, a, b, state.h24); });
   copy([head, ...lines].join('\n'), 'Copied as text');
-};
-$('copyLink').onclick = () => {
-  const p = new URLSearchParams();
-  p.set('z', state.zones.join('|'));
-  p.set('h', state.home); p.set('d', state.date);
-  if (state.sel) p.set('s', `${state.sel.start}-${state.sel.end}`);
-  if (state.task.trim()) p.set('t', state.task.trim());
-  const url = location.href.split('#')[0] + '#' + p.toString();
-  copy(url, location.protocol === 'file:' ? 'Copied (local file link: only works where the same file exists)' : 'Copied share link');
 };
 
 // ---- Add zone ----
