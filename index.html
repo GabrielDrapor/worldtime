@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>团队时区</title>
+<title>Team Time Zones</title>
 <style>
 :root{
   --bg:#f5f6f8;--panel:#fff;--text:#1d2330;--muted:#6b7385;--line:#e3e6ec;
@@ -16,36 +16,37 @@
   --accent:#5b8cff;--sel:rgba(91,140,255,.18);--sel-border:#7aa2ff;--home:#2a2516;
 }}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 -apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .wrap{max-width:1320px;margin:0 auto;padding:20px 16px 40px}
 header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:14px}
 h1{font-size:18px;margin:0}
 .group{display:flex;gap:6px;align-items:center;color:var(--muted)}
-.spacer{flex:1}
 button,input,select{font:inherit;color:inherit}
 button{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;white-space:nowrap}
 button:hover{border-color:var(--accent)}
 button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-button:disabled{opacity:.45;cursor:default;border-color:var(--line)}
+button:disabled{opacity:.35;cursor:default;border-color:var(--line)}
 input,select{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}
+svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .selbar{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
 .selbar .info{color:var(--muted);margin-right:auto}
 .selbar .info b{color:var(--text)}
-#task{width:220px}
-.board{display:grid;grid-template-columns:minmax(0,330px) minmax(0,1fr)}
+#task{width:240px}
+.board{display:grid;grid-template-columns:minmax(0,350px) minmax(0,1fr)}
 .row{height:64px;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:0}
 .left{border-right:1px solid var(--line)}
 .left .row{display:flex;align-items:center;gap:8px;padding:0 12px 0 6px}
 .row.home{background:var(--home)}
-.acts{display:grid;grid-template-columns:repeat(2,20px);gap:2px}
-.acts button{padding:0;width:20px;height:20px;font-size:11px;line-height:18px;border-radius:5px;color:var(--muted);border-color:transparent;background:transparent}
-.acts button:hover{border-color:var(--line);color:var(--text)}
-.off{width:34px;text-align:right;font-weight:700;color:var(--muted);flex:none}
+.acts{display:grid;grid-template-columns:repeat(2,22px);gap:2px}
+.acts button{padding:3px;width:22px;height:22px;border-radius:5px;color:var(--muted);border-color:transparent;background:transparent}
+.acts button:hover:not(:disabled){border-color:var(--line);color:var(--text)}
+.acts button.on{color:var(--accent)}
+.off{width:36px;display:flex;justify-content:flex-end;font-weight:700;color:var(--muted);flex:none}
+.off svg.i{width:18px;height:18px;color:var(--text)}
 .name{flex:1;min-width:0}
-.label{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;outline:none;border-radius:4px;cursor:text}
-.label:focus{box-shadow:0 0 0 2px var(--accent);text-overflow:clip}
+.label{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sub{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .range{text-align:right;white-space:nowrap;flex:none}
 .range .t{font-weight:700;font-size:15px}
@@ -59,16 +60,16 @@ input,select{background:var(--panel);border:1px solid var(--line);border-radius:
 .cell.night{background:var(--night);color:var(--night-text)}
 .cell.work{background:var(--work);color:var(--work-text)}
 .cell.daystart{background:var(--accent);color:#fff}
-.cell.daystart small{opacity:1}
+.cell.daystart small{opacity:1;text-transform:uppercase}
 .selection{position:absolute;top:0;bottom:0;background:var(--sel);border:2px solid var(--sel-border);border-radius:6px;pointer-events:none}
 .nowline{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--now);pointer-events:none;opacity:.8}
 .add{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px}
-.add input{flex:1 1 220px}
+.add input{flex:1 1 280px;max-width:480px}
 .hint{color:var(--muted);font-size:12px;margin-top:10px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
 @media (max-width:720px){
-  .board{grid-template-columns:minmax(0,210px) minmax(0,1fr)}
+  .board{grid-template-columns:minmax(0,200px) minmax(0,1fr)}
   .range{display:none}
   #task{width:100%}
 }
@@ -77,29 +78,29 @@ input,select{background:var(--panel);border:1px solid var(--line);border-radius:
 <body>
 <div class="wrap">
   <header>
-    <h1>团队时区</h1>
+    <h1>Team Time Zones</h1>
     <div class="group">
-      <button id="prev" title="前一天">‹</button>
+      <button id="prev" title="Previous day">‹</button>
       <input type="date" id="date">
-      <button id="next" title="后一天">›</button>
-      <button id="today">今天</button>
+      <button id="next" title="Next day">›</button>
+      <button id="today">Today</button>
     </div>
     <div class="group">
-      工作时间
+      Working hours
       <select id="workStart"></select>–<select id="workEnd"></select>
     </div>
     <div class="group">
-      <select id="clock"><option value="24">24 小时制</option><option value="12">12 小时制</option></select>
+      <select id="clock"><option value="24">24-hour</option><option value="12">12-hour</option></select>
     </div>
   </header>
 
   <div class="panel">
     <div class="selbar">
       <span class="info" id="selInfo"></span>
-      <input id="task" placeholder="事项（可选），如：请假 / 周会">
-      <button class="primary" id="copyText">复制文字</button>
-      <button id="copyLink">复制分享链接</button>
-      <button id="clearSel">清除选择</button>
+      <input id="task" placeholder="Title (optional), e.g. Day off / Weekly sync">
+      <button class="primary" id="copyText">Copy as text</button>
+      <button id="copyLink">Copy share link</button>
+      <button id="clearSel">Clear</button>
     </div>
     <div class="board">
       <div class="left" id="left"></div>
@@ -108,18 +109,18 @@ input,select{background:var(--panel);border:1px solid var(--line);border-radius:
   </div>
 
   <form class="add" id="addForm" autocomplete="off">
-    <input id="tzInput" list="tzList" placeholder="城市或时区，如 纽约、伦敦、America/New_York">
-    <input id="nameInput" placeholder="显示名称（可选，如同事名字）">
-    <button class="primary" type="submit">添加时区</button>
+    <input id="tzInput" list="tzList" placeholder="City or time zone, e.g. London, Tokyo, America/New_York">
+    <button class="primary" type="submit">Add time zone</button>
   </form>
   <datalist id="tzList"></datalist>
-  <div class="hint">在横条上拖动选择时间段（每格半小时），点一下选中整点 1 小时。🏠 表示基准时区，横条按它的日期排列。点名字可以改名。时区列表自动保存在这个浏览器里；发给同事用「复制分享链接」。</div>
+  <div class="hint">Drag across the strips to select a time range (30-minute steps). Click once to select one full hour. The home row is the base time zone: the strips follow its date. Your list is saved in this browser. Use "Copy share link" to send the same view to a teammate.</div>
 </div>
 <div class="toast" id="toast"></div>
 
 <script id="core">
 // ---- Pure time helpers (also loaded by test.mjs) ----
-const WD = ['日','一','二','三','四','五','六'];
+const WD = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const pad = n => String(n).padStart(2, '0');
 const fmtCache = {};
 function fmt(tz) {
@@ -159,15 +160,15 @@ function fmtTime(p, h24) {
   if (h24) return `${pad(p.h)}:${pad(p.mi)}`;
   return `${p.h % 12 || 12}:${pad(p.mi)}${p.h < 12 ? 'am' : 'pm'}`;
 }
-function fmtDate(p) { return `${p.mo}月${p.d}日 周${WD[p.wd]}`; }
+function fmtDate(p) { return `${WD[p.wd]}, ${MON[p.mo - 1]} ${p.d}`; }
 function rangeParts(tz, a, b, h24) {
   const pa = parts(tz, a), pb = parts(tz, b);
   const same = pa.y === pb.y && pa.mo === pb.mo && pa.d === pb.d;
   return {
     time: `${fmtTime(pa, h24)} – ${fmtTime(pb, h24)}`,
     date: same ? fmtDate(pa) : `${fmtDate(pa)} → ${fmtDate(pb)}`,
-    text: same ? `${fmtDate(pa)} ${fmtTime(pa, h24)} – ${fmtTime(pb, h24)}`
-               : `${fmtDate(pa)} ${fmtTime(pa, h24)} – ${fmtDate(pb)} ${fmtTime(pb, h24)}`
+    text: same ? `${fmtDate(pa)}, ${fmtTime(pa, h24)} – ${fmtTime(pb, h24)}`
+               : `${fmtDate(pa)}, ${fmtTime(pa, h24)} – ${fmtDate(pb)}, ${fmtTime(pb, h24)}`
   };
 }
 function offsetLabel(diffMs) {
@@ -178,39 +179,36 @@ function offsetLabel(diffMs) {
 }
 function durationLabel(slots) {
   const h = Math.floor(slots / 2), m = slots % 2 ? 30 : 0;
-  return (h ? `${h} 小时` : '') + (m ? `${h ? ' ' : ''}30 分钟` : '');
+  return [h ? `${h} hr` : '', m ? '30 min' : ''].filter(Boolean).join(' ');
 }
+function zoneName(tz) { return tz === 'UTC' ? 'UTC' : tz.split('/').pop().replace(/_/g, ' '); }
 </script>
 
 <script>
-const CITY = {
-  '上海':'Asia/Shanghai','北京':'Asia/Shanghai','深圳':'Asia/Shanghai','杭州':'Asia/Shanghai','成都':'Asia/Shanghai',
-  '香港':'Asia/Hong_Kong','台北':'Asia/Taipei','东京':'Asia/Tokyo','首尔':'Asia/Seoul','新加坡':'Asia/Singapore',
-  '曼谷':'Asia/Bangkok','雅加达':'Asia/Jakarta','印度':'Asia/Kolkata','班加罗尔':'Asia/Kolkata','迪拜':'Asia/Dubai',
-  '以色列':'Asia/Jerusalem','莫斯科':'Europe/Moscow','伊斯坦布尔':'Europe/Istanbul','伦敦':'Europe/London',
-  '都柏林':'Europe/Dublin','巴黎':'Europe/Paris','柏林':'Europe/Berlin','阿姆斯特丹':'Europe/Amsterdam',
-  '苏黎世':'Europe/Zurich','斯德哥尔摩':'Europe/Stockholm','华沙':'Europe/Warsaw','基辅':'Europe/Kyiv',
-  '纽约':'America/New_York','波士顿':'America/New_York','华盛顿':'America/New_York','多伦多':'America/Toronto',
-  '芝加哥':'America/Chicago','奥斯汀':'America/Chicago','达拉斯':'America/Chicago','丹佛':'America/Denver',
-  '凤凰城':'America/Phoenix','旧金山':'America/Los_Angeles','硅谷':'America/Los_Angeles','洛杉矶':'America/Los_Angeles',
-  '西雅图':'America/Los_Angeles','温哥华':'America/Vancouver','墨西哥城':'America/Mexico_City',
-  '圣保罗':'America/Sao_Paulo','布宜诺斯艾利斯':'America/Argentina/Buenos_Aires','悉尼':'Australia/Sydney',
-  '墨尔本':'Australia/Melbourne','珀斯':'Australia/Perth','奥克兰':'Pacific/Auckland','夏威夷':'Pacific/Honolulu','UTC':'UTC'
+// English aliases for cities that are not IANA zone names.
+const ALIAS = {
+  'beijing':'Asia/Shanghai','shenzhen':'Asia/Shanghai','hangzhou':'Asia/Shanghai','china':'Asia/Shanghai',
+  'san francisco':'America/Los_Angeles','sf':'America/Los_Angeles','seattle':'America/Los_Angeles','pst':'America/Los_Angeles',
+  'boston':'America/New_York','washington':'America/New_York','miami':'America/New_York','est':'America/New_York',
+  'austin':'America/Chicago','dallas':'America/Chicago','houston':'America/Chicago','cst':'America/Chicago',
+  'india':'Asia/Kolkata','bangalore':'Asia/Kolkata','bengaluru':'Asia/Kolkata','mumbai':'Asia/Kolkata','delhi':'Asia/Kolkata',
+  'munich':'Europe/Berlin','frankfurt':'Europe/Berlin','cet':'Europe/Berlin','barcelona':'Europe/Madrid',
+  'tel aviv':'Asia/Jerusalem','gmt':'Europe/London','utc':'UTC'
 };
 const ALL_TZ = (Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : []).concat(['UTC']);
-const STORE_KEY = 'team-timezones.v1';
+const STORE_KEY = 'team-timezones.v2';
 const SLOTS = 48;
-
 const viewerTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-const defaultLabel = tz => tz === 'UTC' ? 'UTC' : tz.split('/').pop().replace(/_/g, ' ');
+
+const ICON = {
+  home: '<svg class="i" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
+  x: '<svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  up: '<svg class="i" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+  down: '<svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>'
+};
 
 const state = {
-  zones: [
-    { tz: viewerTz, label: defaultLabel(viewerTz) },
-    { tz: 'America/Los_Angeles', label: 'Los Angeles' },
-    { tz: 'America/New_York', label: 'New York' },
-    { tz: 'Europe/Berlin', label: 'Berlin' }
-  ].filter((z, i, a) => a.findIndex(x => x.tz === z.tz) === i),
+  zones: [...new Set([viewerTz, 'America/Los_Angeles', 'America/New_York', 'Europe/Berlin'])],
   home: 0, h24: true, workStart: 9, workEnd: 18,
   date: null, sel: null, task: ''
 };
@@ -219,15 +217,14 @@ function load() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
     if (s && Array.isArray(s.zones) && s.zones.length) Object.assign(state, {
-      zones: s.zones.filter(z => isValidTz(z.tz)), home: s.home | 0,
+      zones: s.zones.filter(isValidTz), home: s.home | 0,
       h24: s.h24 !== false, workStart: s.workStart ?? 9, workEnd: s.workEnd ?? 18
     });
   } catch {}
   // A share link overrides the saved list.
   const h = new URLSearchParams(location.hash.slice(1));
   if (h.get('z')) {
-    const zones = h.get('z').split('|').map(x => { const [tz, label] = x.split('~'); return { tz, label: label || defaultLabel(tz) }; })
-      .filter(z => isValidTz(z.tz));
+    const zones = h.get('z').split('|').filter(isValidTz);
     if (zones.length) { state.zones = zones; state.home = Math.min(+h.get('h') || 0, zones.length - 1); }
     if (/^\d{4}-\d{2}-\d{2}$/.test(h.get('d') || '')) state.date = h.get('d');
     const m = /^(\d+)-(\d+)$/.exec(h.get('s') || '');
@@ -235,6 +232,7 @@ function load() {
     if (h.get('t')) state.task = h.get('t');
     history.replaceState(null, '', location.pathname + location.search);
   }
+  if (!state.zones.length) state.zones = [viewerTz];
   if (state.home >= state.zones.length) state.home = 0;
   save();
 }
@@ -248,7 +246,7 @@ function save() {
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-const homeTz = () => state.zones[state.home].tz;
+const homeTz = () => state.zones[state.home];
 const base = () => zonedMidnight(state.date, homeTz());
 const slotTime = s => base() + s * 1800000;
 
@@ -267,38 +265,37 @@ function render() {
   $('task').value = state.task;
 
   let left = '', right = '';
-  state.zones.forEach((z, i) => {
+  state.zones.forEach((tz, i) => {
     const isHome = i === state.home;
-    const off = offsetLabel(offsetMs(z.tz, b) - hOff);
-    let range = '';
+    let range;
     if (state.sel) {
-      const r = rangeParts(z.tz, slotTime(state.sel.start), slotTime(state.sel.end), state.h24);
+      const r = rangeParts(tz, slotTime(state.sel.start), slotTime(state.sel.end), state.h24);
       range = `<div class="range"><div class="t">${r.time}</div><div class="d">${r.date}</div></div>`;
     } else {
-      const p = parts(z.tz, Date.now());
-      range = `<div class="range"><div class="t">${fmtTime(p, state.h24)}</div><div class="d">现在 · ${fmtDate(p)}</div></div>`;
+      const p = parts(tz, Date.now());
+      range = `<div class="range"><div class="t">${fmtTime(p, state.h24)}</div><div class="d">Now · ${fmtDate(p)}</div></div>`;
     }
     left += `<div class="row${isHome ? ' home' : ''}" data-i="${i}">
       <div class="acts">
-        <button data-act="del" title="删除"${state.zones.length < 2 ? ' disabled' : ''}>✕</button>
-        <button data-act="up" title="上移"${i === 0 ? ' disabled' : ''}>↑</button>
-        <button data-act="home" title="设为基准时区">${isHome ? '🏠' : '⌂'}</button>
-        <button data-act="down" title="下移"${i === state.zones.length - 1 ? ' disabled' : ''}>↓</button>
+        <button data-act="del" title="Remove"${state.zones.length < 2 ? ' disabled' : ''}>${ICON.x}</button>
+        <button data-act="up" title="Move up"${i === 0 ? ' disabled' : ''}>${ICON.up}</button>
+        <button data-act="home" title="Set as home time zone"${isHome ? ' class="on"' : ''}>${ICON.home}</button>
+        <button data-act="down" title="Move down"${i === state.zones.length - 1 ? ' disabled' : ''}>${ICON.down}</button>
       </div>
-      <div class="off">${isHome ? '🏠' : off}</div>
-      <div class="name"><div class="label" contenteditable="plaintext-only" spellcheck="false" data-i="${i}">${esc(z.label)}</div>
-        <div class="sub">${esc(abbr(z.tz, b))} · ${esc(z.tz)}</div></div>
+      <div class="off" title="${isHome ? 'Home time zone' : 'Hours from home time zone'}">${isHome ? ICON.home : offsetLabel(offsetMs(tz, b) - hOff)}</div>
+      <div class="name"><div class="label">${esc(zoneName(tz))}</div>
+        <div class="sub">${esc(abbr(tz, b))} · ${esc(tz)}</div></div>
       ${range}
     </div>`;
 
     let cells = '', prevKey = null;
     for (let c = 0; c < 24; c++) {
-      const p = parts(z.tz, b + c * 3600000);
+      const p = parts(tz, b + c * 3600000);
       const key = `${p.y}-${p.mo}-${p.d}`;
       const dayStart = prevKey !== null ? key !== prevKey : (p.h === 0 && p.mi === 0);
       prevKey = key;
       if (dayStart) {
-        cells += `<div class="cell daystart"><small>${p.mo}/${p.d}</small><small>周${WD[p.wd]}</small></div>`;
+        cells += `<div class="cell daystart" title="${fmtDate(p)}"><small>${MON[p.mo - 1]}</small>${p.d}</div>`;
         continue;
       }
       const cls = p.h >= state.workStart && p.h < state.workEnd ? 'work' : (p.h < 7 || p.h >= 22 ? 'night' : '');
@@ -310,15 +307,15 @@ function render() {
   });
 
   const now = Date.now();
-  if (now >= b && now < b + 86400000) right += `<div class="nowline" style="left:${(now - b) / 864000}%" title="现在"></div>`;
+  if (now >= b && now < b + 86400000) right += `<div class="nowline" style="left:${(now - b) / 864000}%" title="Now"></div>`;
   if (state.sel) right += `<div class="selection" style="left:${state.sel.start / SLOTS * 100}%;width:${(state.sel.end - state.sel.start) / SLOTS * 100}%"></div>`;
 
   $('left').innerHTML = left;
   $('strips').innerHTML = right;
 
   $('selInfo').innerHTML = state.sel
-    ? `已选 <b>${durationLabel(state.sel.end - state.sel.start)}</b>`
-    : '在下面的横条上拖动，选一个时间段';
+    ? `Selected: <b>${durationLabel(state.sel.end - state.sel.start)}</b>`
+    : 'Drag across the strips below to select a time range';
   ['copyText', 'clearSel'].forEach(id => $(id).disabled = !state.sel);
 }
 
@@ -364,7 +361,7 @@ $('left').addEventListener('click', e => {
     // Keep the same selected instants when switching the base zone, if they still fit the new day.
     const sel = state.sel && [slotTime(state.sel.start), slotTime(state.sel.end)];
     state.home = i;
-    state.date = todayIn(z[i].tz, sel ? sel[0] : Date.now());
+    state.date = todayIn(z[i], sel ? sel[0] : Date.now());
     if (sel) {
       const s = Math.round((sel[0] - base()) / 1800000), en = Math.round((sel[1] - base()) / 1800000);
       state.sel = s >= 0 && en <= SLOTS ? { start: s, end: en } : null;
@@ -373,13 +370,6 @@ $('left').addEventListener('click', e => {
   }
   const hi = z.indexOf(homeZone);
   state.home = hi < 0 ? 0 : hi;
-  save(); render();
-});
-$('left').addEventListener('keydown', e => { if (e.target.classList.contains('label') && e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
-$('left').addEventListener('focusout', e => {
-  if (!e.target.classList.contains('label')) return;
-  const z = state.zones[+e.target.dataset.i];
-  z.label = e.target.textContent.trim() || defaultLabel(z.tz);
   save(); render();
 });
 
@@ -401,7 +391,7 @@ $('clearSel').onclick = () => { state.sel = null; render(); };
 
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.classList.remove('show'), 1600);
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.classList.remove('show'), 1800);
 }
 async function copy(text, msg) {
   try { await navigator.clipboard.writeText(text); }
@@ -414,42 +404,40 @@ async function copy(text, msg) {
 $('copyText').onclick = () => {
   if (!state.sel) return;
   const a = slotTime(state.sel.start), b = slotTime(state.sel.end);
-  const head = `${state.task.trim() || '时间'}（${durationLabel(state.sel.end - state.sel.start)}）`;
-  const lines = state.zones.map(z => `${z.label}: ${rangeParts(z.tz, a, b, state.h24).text}`);
-  copy([head, ...lines].join('\n'), '已复制文字');
+  const head = `${state.task.trim() || 'Time'} (${durationLabel(state.sel.end - state.sel.start)})`;
+  const lines = state.zones.map(tz => `${zoneName(tz)}: ${rangeParts(tz, a, b, state.h24).text}`);
+  copy([head, ...lines].join('\n'), 'Copied as text');
 };
 $('copyLink').onclick = () => {
   const p = new URLSearchParams();
-  p.set('z', state.zones.map(z => `${z.tz}~${z.label.replace(/[|~]/g, ' ')}`).join('|'));
+  p.set('z', state.zones.join('|'));
   p.set('h', state.home); p.set('d', state.date);
   if (state.sel) p.set('s', `${state.sel.start}-${state.sel.end}`);
   if (state.task.trim()) p.set('t', state.task.trim());
   const url = location.href.split('#')[0] + '#' + p.toString();
-  copy(url, location.protocol === 'file:' ? '已复制链接（本地文件路径，同事需要有同一个文件）' : '已复制分享链接');
+  copy(url, location.protocol === 'file:' ? 'Copied (local file link: only works where the same file exists)' : 'Copied share link');
 };
 
 // ---- Add zone ----
-$('tzList').innerHTML = Object.keys(CITY).map(c => `<option value="${c}">${CITY[c]}</option>`).join('')
-  + ALL_TZ.map(t => `<option value="${t}"></option>`).join('');
+$('tzList').innerHTML = ALL_TZ.map(t => `<option value="${t}"></option>`).join('');
 function resolveTz(input) {
-  const s = input.trim();
+  const s = input.trim().toLowerCase();
   if (!s) return null;
-  if (CITY[s]) return { tz: CITY[s], label: s };
-  const exact = ALL_TZ.find(t => t.toLowerCase() === s.toLowerCase());
-  if (exact) return { tz: exact, label: defaultLabel(exact) };
-  const key = s.toLowerCase().replace(/\s+/g, '_');
+  if (ALIAS[s]) return ALIAS[s];
+  const exact = ALL_TZ.find(t => t.toLowerCase() === s);
+  if (exact) return exact;
+  const key = s.replace(/\s+/g, '_');
   const byCity = ALL_TZ.find(t => t.toLowerCase().split('/').pop() === key);
-  if (byCity) return { tz: byCity, label: defaultLabel(byCity) };
-  if (isValidTz(s)) return { tz: s, label: s };
-  return null;
+  if (byCity) return byCity;
+  return isValidTz(input.trim()) ? input.trim() : null;
 }
 $('addForm').onsubmit = e => {
   e.preventDefault();
-  const r = resolveTz($('tzInput').value);
-  if (!r) { toast('找不到这个时区，试试英文城市名或 Area/City 格式'); return; }
-  const name = $('nameInput').value.trim();
-  state.zones.push({ tz: r.tz, label: name || r.label });
-  $('tzInput').value = ''; $('nameInput').value = '';
+  const tz = resolveTz($('tzInput').value);
+  if (!tz) { toast('Time zone not found. Try a city name or Area/City.'); return; }
+  if (state.zones.includes(tz)) { toast(`${zoneName(tz)} is already in the list`); return; }
+  state.zones.push(tz);
+  $('tzInput').value = '';
   save(); render();
 };
 
