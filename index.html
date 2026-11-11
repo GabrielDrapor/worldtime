@@ -6,15 +6,11 @@
 <title>Team Time Zones</title>
 <style>
 :root{
+  color-scheme:light;
   --bg:#f5f6f8;--panel:#fff;--text:#1d2330;--muted:#6b7385;--line:#e3e6ec;
   --night:#eceff4;--night-text:#8a92a3;--day:#fafbfc;--work:#dceaff;--work-text:#1f4f99;
   --accent:#2563eb;--sel:rgba(37,99,235,.13);--sel-border:#2563eb;--now:#e5484d;--home:#fff8e6;
 }
-@media (prefers-color-scheme:dark){:root{
-  --bg:#0f1218;--panel:#171b23;--text:#e6e9ef;--muted:#8b93a5;--line:#2a303c;
-  --night:#12161d;--night-text:#5f6779;--day:#1b2029;--work:#1d3357;--work-text:#b9d2ff;
-  --accent:#5b8cff;--sel:rgba(91,140,255,.18);--sel-border:#7aa2ff;--home:#2a2516;
-}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .wrap{max-width:1320px;margin:0 auto;padding:20px 16px 40px}
@@ -250,9 +246,9 @@ const homeTz = () => state.zones[state.home];
 const base = () => zonedMidnight(state.date, homeTz());
 const slotTime = s => base() + s * 1800000;
 
-function abbr(tz, t) {
+function abbr(tz, t, style = 'short') {
   try {
-    return new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' })
+    return new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: style })
       .formatToParts(t).find(p => p.type === 'timeZoneName').value;
   } catch { return ''; }
 }
@@ -283,8 +279,8 @@ function render() {
         <button data-act="down" title="Move down"${i === state.zones.length - 1 ? ' disabled' : ''}>${ICON.down}</button>
       </div>
       <div class="off" title="${isHome ? 'Home time zone' : 'Hours from home time zone'}">${isHome ? ICON.home : offsetLabel(offsetMs(tz, b) - hOff)}</div>
-      <div class="name"><div class="label">${esc(zoneName(tz))}</div>
-        <div class="sub">${esc(abbr(tz, b))} · ${esc(tz)}</div></div>
+      <div class="name" title="${esc(abbr(tz, b, 'long'))} · ${esc(tz)}"><div class="label">${esc(abbr(tz, b))}</div>
+        <div class="sub">${esc(zoneName(tz))}</div></div>
       ${range}
     </div>`;
 
