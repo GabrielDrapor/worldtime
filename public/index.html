@@ -57,9 +57,9 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
 .range .t{font-weight:700;font-size:14px;line-height:1.2}
 .range .d{color:var(--muted);font-size:12px;line-height:1.2}
 .scroll{overflow-x:auto}
-.strips{position:relative;overflow:hidden;min-width:760px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;cursor:crosshair}
+.strips{position:relative;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;cursor:crosshair}
 /* The track holds VIS+2 hour columns (one hidden on each side) so it can slide by one hour seamlessly.
-   VIS is 24 on wide screens and 12 on phones; render() sets the widths inline. */
+   VIS (12, 16 or 24) depends on the width available; render() sets the widths inline. */
 .track{position:relative;will-change:transform}
 .strip{display:grid;height:100%;padding:6px 0}
 .cell{display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--day);border-right:1px solid var(--line);font-size:14px;font-weight:600;line-height:1.1}
@@ -77,6 +77,7 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
 .mobile-only{display:none}
+@media (max-width:1100px){.board{grid-template-columns:minmax(0,285px) 30px minmax(0,1fr) 30px}}
 @media (max-width:720px){
   .wrap{padding:14px 12px 32px}
   header{gap:8px 10px}
@@ -252,7 +253,9 @@ const ALL_TZ = (Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : []
 const STORE_KEY = 'team-timezones.v2';
 const HOUR = 3600000, SLOT = 1800000;
 const phone = matchMedia('(max-width:720px)');
-let VIS = phone.matches ? 12 : 24;  // hours visible in the timeline
+// Hours visible in the timeline: as many as fit with hour columns at least ~30px wide.
+const visFor = w => w >= 700 ? 24 : w >= 480 ? 16 : 12;
+let VIS = visFor(document.querySelector('.scroll').clientWidth);
 const slots = () => VIS * 2;
 const viewerTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
@@ -295,8 +298,8 @@ const homeTz = () => state.zones[state.home];
 const midnightOf = dateStr => zonedMidnight(dateStr, homeTz());
 // Position (in % of the track) of instant t; the track starts one hour before viewStart and spans VIS+2 hours.
 const trackPct = t => (t - (state.viewStart - HOUR)) / ((VIS + 2) * HOUR) * 100;
-// Default view: the whole day on wide screens; on phones, start two hours before now.
-const homeView = () => phone.matches ? alignToHour(Date.now() - 2 * HOUR, homeTz()) : midnightOf(todayIn(homeTz()));
+// Default view: the whole day when 24 hours fit; otherwise start two hours before now.
+const homeView = () => VIS < 24 ? alignToHour(Date.now() - 2 * HOUR, homeTz()) : midnightOf(todayIn(homeTz()));
 
 function abbr(tz, t, style = 'short') {
   try {
@@ -618,7 +621,11 @@ $('addForm').onsubmit = e => {
 
 load();
 state.viewStart = homeView();
-phone.addEventListener('change', () => { VIS = phone.matches ? 12 : 24; stopAnim(); offsetPx = 0; render(); });
+new ResizeObserver(() => {
+  const v = visFor($('strips').parentElement.clientWidth);
+  if (v !== VIS) { VIS = v; stopAnim(); offsetPx = 0; render(); }
+}).observe(document.querySelector('.scroll'));
+phone.addEventListener('change', () => render());
 $('editBtn').onclick = () => {
   const on = document.body.classList.toggle('editing');
   $('editBtn').textContent = on ? 'Done' : 'Edit list';
