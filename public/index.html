@@ -57,10 +57,11 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
 .range .t{font-weight:700;font-size:14px;line-height:1.2}
 .range .d{color:var(--muted);font-size:12px;line-height:1.2}
 .scroll{overflow-x:auto}
-.strips{position:relative;overflow:hidden;min-width:760px;user-select:none;touch-action:pan-y;cursor:crosshair}
-/* The track holds 26 hour columns (one hidden on each side) so it can slide by one hour seamlessly. */
-.track{position:relative;width:calc(100% * 26 / 24);margin-left:calc(-100% / 24);will-change:transform}
-.strip{display:grid;grid-template-columns:repeat(26,minmax(0,1fr));height:100%;padding:6px 0}
+.strips{position:relative;overflow:hidden;min-width:760px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;cursor:crosshair}
+/* The track holds VIS+2 hour columns (one hidden on each side) so it can slide by one hour seamlessly.
+   VIS is 24 on wide screens and 12 on phones; render() sets the widths inline. */
+.track{position:relative;will-change:transform}
+.strip{display:grid;height:100%;padding:6px 0}
 .cell{display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--day);border-right:1px solid var(--line);font-size:14px;font-weight:600;line-height:1.1}
 .cell:last-child{border-right:0}
 .cell small{font-size:10px;font-weight:500;opacity:.8}
@@ -75,10 +76,39 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
 .hint{color:var(--muted);font-size:12px;margin-top:10px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
+.mobile-only{display:none}
 @media (max-width:720px){
-  .board{grid-template-columns:minmax(0,200px) 26px minmax(0,1fr) 26px}
-  .range{display:none}
-  #task{width:100%}
+  .wrap{padding:14px 12px 32px}
+  header{gap:8px 10px}
+  h1{flex:1}
+  .mobile-only{display:inline-block}
+  .group.work-hours span{display:none}
+  #task{width:100%;order:3}
+  .selbar{padding:10px}
+  .selbar .info{width:100%}
+  .board{grid-template-columns:minmax(0,112px) minmax(0,1fr)}
+  .daynav{display:none}
+  .row{height:58px}
+  /* Phone rows: name and city on one line, selected (or current) time below it. */
+  .left .row{flex-direction:column;align-items:stretch;justify-content:center;gap:1px;padding:0 8px}
+  .acts,.off{display:none}
+  .name{flex:none;display:flex;gap:4px;align-items:baseline}
+  .label{font-size:13px;flex:none}
+  .sub{font-size:11px;min-width:0}
+  .range{text-align:left}
+  .range .t{font-size:12px}
+  .range .d{font-size:11px}
+  .scroll{overflow:hidden}
+  .strips{min-width:0}
+  .cell{font-size:12px}
+  .cell small{font-size:8px}
+  /* Edit mode: show the row buttons instead of the times. */
+  body.editing .board{grid-template-columns:minmax(0,160px) minmax(0,1fr)}
+  body.editing .left .row{flex-direction:row;align-items:center;gap:6px;padding:0 6px 0 4px}
+  body.editing .acts{display:grid;grid-template-columns:repeat(2,26px)}
+  body.editing .acts button{width:26px;height:26px}
+  body.editing .range{display:none}
+  body.editing .name{flex:1;flex-direction:column;gap:0}
 }
 </style>
 </head>
@@ -86,14 +116,15 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
 <div class="wrap">
   <header>
     <h1>Team Time Zones</h1>
+    <button id="editBtn" class="mobile-only">Edit list</button>
     <div class="group">
       <button id="prev" title="Previous day">‹</button>
       <input type="date" id="date">
       <button id="next" title="Next day">›</button>
       <button id="today">Today</button>
     </div>
-    <div class="group">
-      Working hours
+    <div class="group work-hours">
+      <span>Working hours</span>
       <select id="workStart"></select>–<select id="workEnd"></select>
     </div>
     <div class="group">
@@ -121,7 +152,7 @@ svg.i{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-
     <button class="primary" type="submit">Add time zone</button>
   </form>
   <datalist id="tzList"></datalist>
-  <div class="hint">Drag across the strips to select a time range (30-minute steps). Click once to select one full hour. The home row is the base time zone. Move the timeline with a two-finger swipe, the mouse wheel, the arrows on either side (3 hours per click, hold to keep moving) or the ← → keys. Your list is saved in this browser.</div>
+  <div class="hint">Drag across the strips to select a time range (30-minute steps). Click once to select one full hour. On a phone: tap an hour, or press and hold, then drag to select; swipe sideways to move the timeline. The home row is the base time zone. Move the timeline with a two-finger swipe, the mouse wheel, the arrows on either side (3 hours per click, hold to keep moving) or the ← → keys. Your list is saved in this browser.</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -219,7 +250,10 @@ const ALIAS = {
 };
 const ALL_TZ = (Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : []).concat(['UTC']);
 const STORE_KEY = 'team-timezones.v2';
-const SLOTS = 48, HOUR = 3600000, SLOT = 1800000;
+const HOUR = 3600000, SLOT = 1800000;
+const phone = matchMedia('(max-width:720px)');
+let VIS = phone.matches ? 12 : 24;  // hours visible in the timeline
+const slots = () => VIS * 2;
 const viewerTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
 const ICON = {
@@ -259,8 +293,10 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const homeTz = () => state.zones[state.home];
 const midnightOf = dateStr => zonedMidnight(dateStr, homeTz());
-// Position (in % of the track) of instant t; the track starts one hour before viewStart and spans 26 hours.
-const trackPct = t => (t - (state.viewStart - HOUR)) / (26 * HOUR) * 100;
+// Position (in % of the track) of instant t; the track starts one hour before viewStart and spans VIS+2 hours.
+const trackPct = t => (t - (state.viewStart - HOUR)) / ((VIS + 2) * HOUR) * 100;
+// Default view: the whole day on wide screens; on phones, start two hours before now.
+const homeView = () => phone.matches ? alignToHour(Date.now() - 2 * HOUR, homeTz()) : midnightOf(todayIn(homeTz()));
 
 function abbr(tz, t, style = 'short') {
   try {
@@ -302,7 +338,7 @@ function render() {
 
     const dayKey = p => `${p.y}-${p.mo}-${p.d}`;
     let cells = '', prevKey = dayKey(parts(tz, b - 2 * HOUR));
-    for (let c = -1; c <= 24; c++) {
+    for (let c = -1; c <= VIS; c++) {
       const p = parts(tz, b + c * HOUR);
       const key = dayKey(p);
       const dayStart = key !== prevKey;
@@ -316,20 +352,20 @@ function render() {
       const sub = [p.mi ? ':' + pad(p.mi) : '', state.h24 ? '' : (p.h < 12 ? 'am' : 'pm')].filter(Boolean).join(' ');
       cells += `<div class="cell ${cls}">${hour}${sub ? `<small>${sub}</small>` : ''}</div>`;
     }
-    right += `<div class="row${isHome ? ' home' : ''}"><div class="strip">${cells}</div></div>`;
+    right += `<div class="row${isHome ? ' home' : ''}"><div class="strip" style="grid-template-columns:repeat(${VIS + 2},minmax(0,1fr))">${cells}</div></div>`;
   });
 
   const now = Date.now();
-  if (now >= b - HOUR && now < b + 25 * HOUR) right += `<div class="nowline" style="left:${trackPct(now)}%" title="Now"></div>`;
-  if (state.sel) right += `<div class="selection" style="left:${trackPct(state.sel.a)}%;width:${(state.sel.b - state.sel.a) / (26 * HOUR) * 100}%"></div>`;
+  if (now >= b - HOUR && now < b + (VIS + 1) * HOUR) right += `<div class="nowline" style="left:${trackPct(now)}%" title="Now"></div>`;
+  if (state.sel) right += `<div class="selection" style="left:${trackPct(state.sel.a)}%;width:${(state.sel.b - state.sel.a) / ((VIS + 2) * HOUR) * 100}%"></div>`;
 
   $('left').innerHTML = left;
-  $('strips').innerHTML = `<div class="track" id="track">${right}</div>`;
+  $('strips').innerHTML = `<div class="track" id="track" style="width:${(VIS + 2) / VIS * 100}%;margin-left:${-100 / VIS}%">${right}</div>`;
   applyOffset();
 
   $('selInfo').innerHTML = state.sel
     ? `Selected: <b>${durationLabel((state.sel.b - state.sel.a) / SLOT)}</b>`
-    : 'Drag across the strips below to select a time range';
+    : (phone.matches ? 'Tap an hour, or press and hold, then drag' : 'Drag across the strips below to select a time range');
   ['copyText', 'clearSel'].forEach(id => $(id).disabled = !state.sel);
 }
 
@@ -338,9 +374,10 @@ let drag = null;
 const selFromSlots = (s, e) => ({ a: state.viewStart + s * SLOT, b: state.viewStart + e * SLOT });
 function slotAt(e) {
   const r = $('strips').getBoundingClientRect();
-  return Math.max(0, Math.min(SLOTS - 1, Math.floor((e.clientX - r.left - offsetPx) / r.width * SLOTS)));
+  return Math.max(0, Math.min(slots() - 1, Math.floor((e.clientX - r.left - offsetPx) / r.width * slots())));
 }
 $('strips').addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch') return touchStart(e);
   if (e.button !== 0) return;
   if (anim || Math.abs(offsetPx) > 0.5) { stopAnim(); moveBy(snapDistance()); }  // settle on the hour grid first
   const s = slotAt(e);
@@ -350,6 +387,7 @@ $('strips').addEventListener('pointerdown', e => {
   render();
 });
 $('strips').addEventListener('pointermove', e => {
+  if (touch && e.pointerId === touch.id) return touchMove(e);
   if (!drag || e.pointerId !== drag.id) return;
   const s = slotAt(e);
   if (s !== drag.anchor) drag.moved = true;
@@ -357,10 +395,64 @@ $('strips').addEventListener('pointermove', e => {
   if (!state.sel || sel.a !== state.sel.a || sel.b !== state.sel.b) { state.sel = sel; render(); }
 });
 function endDrag(e) {
+  if (touch && e.pointerId === touch.id) return touchEnd(e);
   if (!drag || e.pointerId !== drag.id) return;
   if (!drag.moved) { const h = Math.floor(drag.anchor / 2) * 2; state.sel = selFromSlots(h, h + 2); render(); }
   drag = null;
 }
+// Touch: a tap selects one hour; press and hold (LONG_PRESS_MS), then drag to select a range;
+// a sideways swipe moves the timeline; an up/down swipe scrolls the page as usual.
+const LONG_PRESS_MS = 350, MOVE_SLOP = 8;
+let touch = null;  // { id, x, y, lastX, mode: 'pending' | 'select' | 'pan' | 'scroll', anchor, timer }
+function touchStart(e) {
+  if (anim || Math.abs(offsetPx) > 0.5) { stopAnim(); moveBy(snapDistance()); }
+  touch = { id: e.pointerId, x: e.clientX, y: e.clientY, lastX: e.clientX, mode: 'pending' };
+  touch.timer = setTimeout(() => {
+    if (!touch || touch.mode !== 'pending') return;
+    touch.mode = 'select';
+    touch.anchor = slotAt({ clientX: touch.x });
+    state.sel = selFromSlots(touch.anchor, touch.anchor + 1);
+    if (navigator.vibrate) navigator.vibrate(10);
+    render();
+  }, LONG_PRESS_MS);
+}
+function touchMove(e) {
+  const dx = e.clientX - touch.x, dy = e.clientY - touch.y;
+  if (touch.mode === 'pending') {
+    if (Math.abs(dx) > MOVE_SLOP && Math.abs(dx) >= Math.abs(dy)) {
+      touch.mode = 'pan';
+      clearTimeout(touch.timer);
+      $('strips').setPointerCapture(touch.id);
+    } else if (Math.abs(dy) > MOVE_SLOP) {
+      touch.mode = 'scroll';
+      clearTimeout(touch.timer);
+    }
+  }
+  if (touch.mode === 'pan') {
+    moveBy(touch.lastX - e.clientX);
+    touch.lastX = e.clientX;
+  } else if (touch.mode === 'select') {
+    const s = slotAt(e);
+    const sel = selFromSlots(Math.min(touch.anchor, s), Math.max(touch.anchor, s) + 1);
+    if (sel.a !== state.sel.a || sel.b !== state.sel.b) { state.sel = sel; render(); }
+  }
+}
+function touchEnd(e) {
+  clearTimeout(touch.timer);
+  if (touch.mode === 'pending' && e.type === 'pointerup') {
+    const h = Math.floor(slotAt(e) / 2) * 2;
+    state.sel = selFromSlots(h, h + 2);
+    render();
+  } else if (touch.mode === 'pan') {
+    snap();
+  }
+  touch = null;
+}
+// Stop the page from scrolling while a touch pans the timeline or selects a range.
+$('strips').addEventListener('touchmove', e => {
+  if (touch && (touch.mode === 'pan' || touch.mode === 'select')) e.preventDefault();
+}, { passive: false });
+$('strips').addEventListener('contextmenu', e => e.preventDefault());
 $('strips').addEventListener('pointerup', endDrag);
 $('strips').addEventListener('pointercancel', endDrag);
 
@@ -397,13 +489,13 @@ $('date').onchange = e => { if (e.target.value) { stopAnim(); offsetPx = 0; stat
 const shiftDays = n => { stopAnim(); offsetPx = 0; state.viewStart = midnightOf(addDays(todayIn(homeTz(), state.viewStart), n)); render(); };
 $('prev').onclick = () => shiftDays(-1);
 $('next').onclick = () => shiftDays(1);
-$('today').onclick = () => { stopAnim(); offsetPx = 0; state.viewStart = midnightOf(todayIn(homeTz())); render(); };
+$('today').onclick = () => { stopAnim(); offsetPx = 0; state.viewStart = homeView(); render(); };
 
 // ---- Moving the timeline: arrows, trackpad and mouse wheel all go through moveBy() ----
 // offsetPx is how far the track is slid from its rest position. It stays within one hour column;
 // each time it passes a full column, viewStart moves one hour and the track is re-rendered.
 let offsetPx = 0, anim = null, holdTimer = null, snapTimer = null;
-const cellW = () => $('strips').getBoundingClientRect().width / 24;
+const cellW = () => $('strips').getBoundingClientRect().width / VIS;
 function applyOffset() { const t = $('track'); if (t) t.style.transform = `translateX(${offsetPx}px)`; }
 function moveBy(px) {  // px > 0 moves to later times
   offsetPx -= px;
@@ -470,7 +562,7 @@ $('strips').addEventListener('wheel', e => {
   let d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
   if (!d) return;
   e.preventDefault();
-  if (e.deltaMode === 1) d *= 16; else if (e.deltaMode === 2) d *= cellW() * 24;
+  if (e.deltaMode === 1) d *= 16; else if (e.deltaMode === 2) d *= cellW() * VIS;
   stopAnim();
   moveBy(d);
   clearTimeout(snapTimer);
@@ -525,9 +617,14 @@ $('addForm').onsubmit = e => {
 };
 
 load();
-state.viewStart = midnightOf(todayIn(homeTz()));
+state.viewStart = homeView();
+phone.addEventListener('change', () => { VIS = phone.matches ? 12 : 24; stopAnim(); offsetPx = 0; render(); });
+$('editBtn').onclick = () => {
+  const on = document.body.classList.toggle('editing');
+  $('editBtn').textContent = on ? 'Done' : 'Edit list';
+};
 render();
-setInterval(() => { if (!drag && !anim) render(); }, 60000);
+setInterval(() => { if (!drag && !anim && !touch) render(); }, 60000);
 </script>
 </body>
 </html>
